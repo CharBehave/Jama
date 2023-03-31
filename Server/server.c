@@ -19,6 +19,8 @@ int main(void)
 	
 	Configure_context(ctx); //add cert and key to SSL_CTX object
 	
+	int clientId;
+	
 	while (1)
 	{
 		struct sockaddr_in addr;
@@ -53,11 +55,18 @@ int main(void)
 		else
 		{
 			puts("Handshake accepted!");
-			SSL_write(ssl, reply, strlen(reply));
+			clientId++;
+			
+			InsertClient(ssl, clientId);
+			
+			
+			pthread_create(&tid, NULL, client_handler, ssl);
+			
+			
 			
 		}
 		
-		pthread_create(&tid, NULL, client_handler, ssl);
+		
 		
 		//SSL_shutdown(ssl);
 		//SSL_free(ssl);
