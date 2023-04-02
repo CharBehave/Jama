@@ -3,6 +3,8 @@
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <openssl/ssl.h>
 
+void* serverCloseHandler(void* vargp);
 
 #endif
