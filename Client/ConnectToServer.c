@@ -42,7 +42,8 @@ int ServerSetup(int port)
 	int socketD;
 	
 	struct sockaddr_in addr;
-    socklen_t addrlen;
+    socklen_t addrlen = sizeof(addr);
+	
 	
 	addr.sin_family = AF_INET; //IPV4 protocol
 	addr.sin_port = htons((uint16_t)port); //Port to bind to 

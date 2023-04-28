@@ -3,10 +3,25 @@
 #include "ConnectToServer.h"
 #include "SSL_Handler.h"
 
-    SSLData *dataFD;
+/*
+ * 1.Connect to server
+ * 2."Do you wish to be NodeServer"
+ * 3.Create thread clientCommunicate
+ * 4.Create node server, if wanted
+ */
+
+
+
+
+    SSLData *dataFD = NULL;
 
 int main(int argc, char *argv[])
 {
+	dataFD = (SSLData*)malloc(sizeof(SSLData));
+	dataFD->nodeSSL = NULL;
+	dataFD->ssl = NULL;
+	
+	
     int nodeServerInitialized = 0;
     
     if (argc != 3)
@@ -31,6 +46,8 @@ int main(int argc, char *argv[])
     if (c == 'Y')
     {
         socketLocal = ServerSetup(6221);
+        
+        nodeServerInitialized = 1;
         
         ctx2 = create_context(); //Creating SSL_CTX object
         Configure_context(ctx2);

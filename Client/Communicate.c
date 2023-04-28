@@ -18,6 +18,7 @@ void FreeList(void)
         head = head->pNext;
         free(temp);
     }
+    head = NULL;
 }
 
 void InsertClient(SSL *ssl, int id, int clientFd)
@@ -35,67 +36,70 @@ void InsertClient(SSL *ssl, int id, int clientFd)
 
 void * ClientCommunicate(void * ssl)
 {
-    SSLData *SSL;
+    SSLData *SSL = NULL;
     SSL = (SSLData*)ssl;
     char strCheck[5] = "exit\n";
-    int check;
-    scanf("%d", &check);
     
-    while (check == 2)
+    while (1)
     {
-        scanf("%d", &check);
-        char *message = NULL;
-        message = (char*) malloc(1024);
-
+        char message[1024];
+        
+        printf("\nEnter message: \n");
+        scanf("%s", message);
+        
         if (message == NULL)
         {
             perror("memory allocation failed!");
             exit(EXIT_FAILURE);
         }
         
-        strcpy(message, "message to server");
+        //strcpy(message, "message to server\n");
+        
+
         
         if (strcmp(message, strCheck) == 0)
         {
-            free(message);
+            //free(message);
             return NULL;
         }
         
         //printf("\n\nConnected with %s encryption\n", SSL_get_cipher(ssl));
         //~ ShowCerts(ssl1);        /* get any certs */
         
-        int amountOfBytes = SSL_write(SSL->nodeSSL, message, (int)strlen(message)) ;
+        int amountOfBytes = SSL_write(SSL->ssl, message, strlen(message)) ;
         
         if (amountOfBytes <= 0)   /* encrypt & send message */
         {
             perror("Could not send message!");
         }
         
-        free(message);
+        //free(message);
+        
+        
     }
     return NULL;
 }
  
 void * NodeListenToClient(void * ssl)
 {
-    SSLData *SSL;
+    SSLData *SSL = NULL;
     SSL = (SSLData*)ssl;
     int bytes;
-    char buf[1024];
+    char buf[1024] = {0};
     struct node* ptr = head;
     
-    //~ while (1)
+    while ((bytes = SSL_read(ptr->client, buf, sizeof(buf))) > 0)
     {
-        if ((bytes = SSL_read(ptr->client, buf, sizeof(buf))) > 0) /* get reply & decrypt */
-        {
+         /* get reply & decrypt */
+        
             if (bytes >= 1024)
             {
                 printf("Client message is too long!\n");
           //      break;
             }
-            buf[bytes] = 0;
+            buf[bytes] = '\0';
             printf("Received from client: %s\n", buf);
-        }
+        
         
         if (SSL_write(SSL->ssl, buf, (int)strlen(buf)) > 0)
         {
@@ -112,7 +116,7 @@ void * NodeListenToClient(void * ssl)
             }
         }
             
-            if (ptr != NULL)
+            if (ptr->pNext != NULL)
             {
                 ptr = ptr->pNext;
             }
@@ -128,12 +132,12 @@ void * NodeListenToServer(void * ssl)
     SSL = (SSLData*)ssl;
     int bytes;
     char buf[1024];
-    struct node* ptr = head;
+    //struct node* ptr = head;
     
-    //~ while (1)
+    while ((bytes = SSL_read(SSL->ssl, buf, sizeof(buf))) > 0)
     {
-        while ((bytes = SSL_read(SSL->ssl, buf, sizeof(buf))) > 0) /* get reply & decrypt */
-        {
+        /* get reply & decrypt */
+        
             if (bytes >= 1024)
             {
                 printf("Server message is too long!\n");
@@ -141,28 +145,28 @@ void * NodeListenToServer(void * ssl)
             }
             buf[bytes] = 0;
             printf("Received from server: %s\n", buf);
-        }
         
-        while (ptr != NULL)
+        
+        while (head != NULL)
         {
-            if (SSL_write(ptr->client, buf, (int)strlen(buf)) > 0)
+            if (SSL_write(head->client, buf, (int)strlen(buf)) > 0)
             {
-                printf("Sending client %d: %s\n", ptr->id, buf);
+                printf("Sending client %d: %s\n", head->id, buf);
             }
             else
             {
-                printf("Error sending client %d message\n", ptr->id);
+                printf("Error sending client %d message\n", head->id);
 			
-                if (SSL_write(ptr->client, buf, (int)strlen(buf)) <= 0)
+                if (SSL_write(head->client, buf, (int)strlen(buf)) <= 0)
                 {
                     printf("Freeing whole list of clients\n");
                     FreeList();
                 }
             }
             
-            if (ptr != NULL)
+            if (head != NULL)
             {
-                ptr = ptr->pNext;
+                head = head->pNext;
             }
         }
         memset(buf, 0, sizeof(buf));
