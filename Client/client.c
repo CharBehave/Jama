@@ -57,6 +57,7 @@ int main(int argc, char *argv[])
         struct sockaddr_in addr;
         unsigned int len = sizeof(addr);
         
+	// while loop now
         puts("Waiting to accept client");
         
         client = accept(socketLocal, (struct sockaddr*)&addr, &len);
