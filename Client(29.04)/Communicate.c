@@ -2,6 +2,7 @@
 #include "Communicate.h"
 
 struct node *head = NULL;
+pthread_mutex_t lock;
 
 void * NodeServer(void * ssl)
 {
@@ -19,6 +20,8 @@ void * NodeServer(void * ssl)
 
     pthread_t threadID1;
     pthread_t threadID2;
+    
+    int flag = 0;
     
     while (1)
     {
@@ -51,6 +54,13 @@ void * NodeServer(void * ssl)
             InsertClient(SSL->nodeSSL, connectedClient, client);
         }
         
+        if (pthread_mutex_init(&lock, NULL) != 0)
+		{
+			puts("mutex init has failed");
+		}
+        
+        
+        
         puts("Creating read and write threads...");
         
         if (pthread_create(&threadID1, NULL, NodeListenToClient, (void *)SSL) != 0)
@@ -58,11 +68,17 @@ void * NodeServer(void * ssl)
             perror("Error creating thread 2!");
             exit(EXIT_FAILURE);
         }
-        if (pthread_create(&threadID2, NULL, NodeListenToServer, (void *)SSL) != 0)
-        {
-            perror("Error creating thread 3!");
-            exit(EXIT_FAILURE);
-        }
+        
+        if (flag != 1)
+		{
+			flag = 1;
+			if (pthread_create(&threadID2, NULL, NodeListenToServer, (void *)SSL) != 0)
+			{
+				perror("Error creating thread 3!");
+				exit(EXIT_FAILURE);
+			}
+		}
+
         
     }
 
@@ -87,7 +103,11 @@ void FreeList(void)
     {
         temp = head;
         head = head->pNext;
-        free(temp);
+        if (temp != NULL)
+		{
+			free(temp);
+		}
+        
     }
     head = NULL;
 }
@@ -152,8 +172,9 @@ void * ClientCommunicate(void * ssl)
     {
         
         //~ printf("\nEnter message: \n");
-        scanf("%s", message);
+        fgets(message, 1024, stdin);
         
+        message[strlen(message) - 1] = '\n';
         message[strlen(message)] = '\0';
         
         //~ if (strcmp(message, strCheck) == 0)
@@ -178,52 +199,56 @@ void * ClientCommunicate(void * ssl)
     return NULL;
 }
  
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
 void * NodeListenToClient(void * ssl)
 {
     SSLData *SSL = NULL;
     SSL = (SSLData*)ssl;
     int bytes;
     char buf[1024] = {0};
-    struct node* ptr = head;
+    //struct node* ptr = head;
+    int err;
     
-    while (ptr != NULL)
-    {
-            
-        while ((bytes = SSL_read(ptr->client, buf, sizeof(buf))) > 0)
-        {
-            if (bytes >= 1024)
-            {
-                printf("Client message is too long!\n");
-                //break;
-            }
-            buf[bytes] = '\0';
-            printf("Received from client: %s\n", buf);
+    //pthread_mutex_lock(&lock);
         
-            if (SSL_write(SSL->ssl, buf, (int)strlen(buf)) > 0)
-            {
-                printf("Sending server: %s\n", buf);
-            }
-            else
-            {
-                printf("Error sending server %d message\n", ptr->id);
-                printf("Freeing whole list of clients\n");
-                FreeList();
-            }
             
-            memset(buf, 0, sizeof(buf));
-        }
-        
-        if (ptr != NULL)
-        {
-            ptr = ptr->pNext;
-        }
-        else
-        {
-            break;
-        }
-    }
+	while ((bytes = SSL_read(SSL->nodeSSL, buf, sizeof(buf))) > 0)
+	{
+		if (bytes >= 1024)
+		{
+			printf("Client message is too long!\n");
+			//break;
+		}
+		buf[bytes] = '\0';
+		printf("Received from client: %s\n", buf);
+		if ((err = SSL_write(SSL->ssl, buf, (int)strlen(buf))) > 0)
+		{
+			printf("Sending server: %s\n", buf);
+		}
+		else
+		{
+
+			//printf("Error sending server %d message\n", ptr->id);
+			printf("Freeing whole list of clients\n");
+			FreeList();
+		}
+		
+		memset(buf, 0, sizeof(buf));
+	}
+	
     
-    ptr = head;
+    
+    //pthread_mutex_unlock(&lock);
     
     return NULL;
 }
@@ -235,6 +260,7 @@ void * NodeListenToServer(void * ssl)
     int bytes;
     char buf[1024];
     struct node* ptr = head;
+    int write;
     
             
     while ((bytes = SSL_read(SSL->ssl, buf, sizeof(buf))) > 0)
@@ -247,25 +273,28 @@ void * NodeListenToServer(void * ssl)
         buf[bytes] = '\0';
         printf("Received from server: %s\n", buf);
         
-        if (SSL_write(ptr->client, buf, (int)strlen(buf)) > 0)
-        {
-            printf("Sending client %d: %s\n", ptr->id, buf);
-        }
-        else
-        {
-            printf("Error sending client %d message\n", ptr->id);
-            printf("Freeing whole list of clients\n");
-            FreeList();
-        }
-    
-        if (ptr != NULL)
-        {
-            ptr = ptr->pNext;
-        }
-        
-        memset(buf, 0, sizeof(buf));
+        while (ptr != NULL)
+		{
+			if ((write = SSL_write(ptr->client, buf, (int)strlen(buf))) > 0)
+	        {
+	            printf("Sending client %d: %s\n", ptr->id, buf);
+	        }
+	        else
+	        {
+	            printf("Error sending client %d message\n", ptr->id);
+	            printf("Freeing whole list of clients\n");
+	            FreeList();
+	        }
+	        
+	        ptr = ptr->pNext; 
+		}
+		
+		ptr = head;
+		
+
     }
         
+    memset(buf, 0, sizeof(buf));
     
     ptr = head;
     
