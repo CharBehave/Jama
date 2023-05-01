@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 
 //global variables
@@ -37,7 +36,7 @@ void* client_handler(void *vargp)
 	
 	handledClientId++;
 	
-	int id = handledClientId;
+	//int id = handledClientId;
 	
 	printf("Handling client with id: %d\n", handledClientId);
 	
@@ -51,6 +50,49 @@ void* client_handler(void *vargp)
 		SendMessageToClients(pBuf);
 		
 	}
+	
+	int err = SSL_get_error(ssl, bytes);
+	
+	
+	switch (err)
+	{
+		case SSL_ERROR_ZERO_RETURN:
+			puts("ERROR ZERO RETURN");
+			break;
+		case SSL_ERROR_WANT_READ:
+			puts("SSL ERROR WANT READ");
+			break;
+		case SSL_ERROR_WANT_WRITE:
+			puts("SSL ERROR WANT WRITE");
+			break;
+		case SSL_ERROR_WANT_CONNECT:
+			puts("SSL ERROR WANT CONNECT");
+			break;
+		case SSL_ERROR_WANT_ACCEPT:
+			puts("SSL ERROR WANT ACCEPT");
+			break;
+		case SSL_ERROR_WANT_X509_LOOKUP:
+			puts("SSL ERROR X509 LOOKUP");
+			break;
+		case SSL_ERROR_WANT_ASYNC:
+			puts("SSL ERROR WANT ASYNC");
+			break;
+		case SSL_ERROR_WANT_ASYNC_JOB:
+			puts("SSL ERROR WANT ASYNC JOB");
+			break;
+		case SSL_ERROR_WANT_CLIENT_HELLO_CB:
+			puts("SSL ERROR WANT CLIENT HELLO CB");
+			break;
+		case SSL_ERROR_SYSCALL:
+			puts("SSL ERROR SYSCALL");
+			break;
+		case SSL_ERROR_SSL:
+			puts("SSL ERROR SSL");
+			break;
+		default:
+			puts("UNKNOWN SSL ERROR");
+	}
+	
 	
 	printf("Shutting down thread: %ld\n", pthread_self());
 	
@@ -143,12 +185,12 @@ void SendMessageToClients(char* msg)
 		
 		if (SSL_write(ptr->client, msg, strlen(msg)) > 0)
 		{
-			printf("Sending Client %d : %s", ptr->id, msg);
+			printf("Sending Client %d : %s\n", ptr->id, msg);
 			
 		}
 		else
 		{
-			printf("Error sending Client %d message\n", ptr->id);
+			printf("\nError sending Client %d message\n", ptr->id);
 			
 			//if error writing to certain client, shut the connection
 			if (SSL_write(ptr->client, msg, strlen(msg)) <= 0)
